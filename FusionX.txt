@@ -2149,52 +2149,6 @@ local toggleSemAnimacao = ConfiguracaoSection:AddToggle({
     end
 })
 
-local function desabilitarOvoProteina()
-    pcall(function()
-        local mochila = JogadorLocal:WaitForChild("Backpack")
-        local ovoProteina = mochila:FindFirstChild("Protein Egg")
-        
-        if ovoProteina then
-            if ovoProteina.Enabled == false and ovoProteina.CanBeDropped == false then
-                return
-            else
-                ovoProteina:Destroy()
-                task.wait(0.1)
-            end
-        end
-    
-        local novoOvo = Instance.new("Tool")
-        novoOvo.Name = "Protein Egg"
-        novoOvo.Enabled = false
-        novoOvo.CanBeDropped = false
-        novoOvo.RequiresHandle = false
-        novoOvo.Parent = mochila
-    end)
-end
-
-local function monitorarOvoProteina()
-    while true do
-        desabilitarOvoProteina()
-        task.wait(0.5)
-    end
-end
-
-JogadorLocal.CharacterAdded:Connect(function()
-    task.wait(1)
-    desabilitarOvoProteina()
-end)
-
-local botaoDesabilitarOvo = ConfiguracaoSection:AddButton({
-    Title = "Desabilitar Ovo de Proteína",
-    Callback = function()
-        desabilitarOvoProteina()
-        coroutine.wrap(monitorarOvoProteina)()
-    end
-})
-
-desabilitarOvoProteina()
-coroutine.wrap(monitorarOvoProteina)()
-
 local function verificarPersonagem()
     if not JogadorLocal.Character then
         repeat task.wait() until JogadorLocal.Character
@@ -2354,72 +2308,20 @@ local toggleAmigosListaBranca = ConfiguracaoSection:AddToggle({
     end
 })
 
-local autoEquipPunch = false
-local autoPunchNoAnim = false
+local LocalPlayer = game:GetService("Players").LocalPlayer
 
+local autoEquipPunch = false
 local autoEquipToggle = ConfiguracaoSection:AddToggle({
     Title = "Equipar Soco Automaticamente",
     Default = false,
     Callback = function(state)
         autoEquipPunch = state
-        task.spawn(function()
-            while autoEquipPunch do
-                local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
-                if punch then
-                    punch.Parent = LocalPlayer.Character
-                end
-                task.wait(0.1)
-            end
-        end)
-    end
-})
-
-local autoPunchNoAnimToggle = ConfiguracaoSection:AddToggle({
-    Title = "Bater [Sem Animação]",
-    Default = false,
-    Callback = function(state)
-        autoPunchNoAnim = state
-        task.spawn(function()
-            while autoPunchNoAnim do
-                local punch = LocalPlayer.Backpack:FindFirstChild("Punch") or LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Punch")
-                if punch then
-                    if punch.Parent ~= LocalPlayer.Character then
-                        punch.Parent = LocalPlayer.Character
-                    end
-                    LocalPlayer.muscleEvent:FireServer("punch", "rightHand")
-                    LocalPlayer.muscleEvent:FireServer("punch", "leftHand")
-                else
-                    autoPunchNoAnim = false
-                end
-                task.wait(0.01)
-            end
-        end)
-    end
-})
-
-local fastPunchToggle = ConfiguracaoSection:AddToggle({
-    Title = "Bater Rapidamente",
-    Default = false,
-    Callback = function(state)
-        _G.fastHitActive = state
         if state then
             task.spawn(function()
-                while _G.fastHitActive do
+                while autoEquipPunch do
                     local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
                     if punch then
                         punch.Parent = LocalPlayer.Character
-                        if punch:FindFirstChild("attackTime") then
-                            punch.attackTime.Value = 0
-                        end
-                    end
-                    task.wait(0.1)
-                end
-            end)
-            task.spawn(function()
-                while _G.fastHitActive do
-                    local punch = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Punch")
-                    if punch then
-                        punch:Activate()
                     end
                     task.wait(0.1)
                 end
@@ -2433,14 +2335,77 @@ local fastPunchToggle = ConfiguracaoSection:AddToggle({
     end
 })
 
+local autoPunchNoAnim = false
+local autoPunchNoAnimToggle = ConfiguracaoSection:AddToggle({
+    Title = "Bater [Sem Animação]",
+    Default = false,
+    Callback = function(state)
+        autoPunchNoAnim = state
+        if state then
+            task.spawn(function()
+                while autoPunchNoAnim do
+                    local punch = LocalPlayer.Backpack:FindFirstChild("Punch") or LocalPlayer.Character:FindFirstChild("Punch")
+                    if punch then
+                        if punch.Parent ~= LocalPlayer.Character then
+                            punch.Parent = LocalPlayer.Character
+                        end
+                        LocalPlayer.muscleEvent:FireServer("punch", "rightHand")
+                        LocalPlayer.muscleEvent:FireServer("punch", "leftHand")
+                    end
+                    task.wait(0.01)
+                end
+            end)
+        end
+    end
+})
+
+local fastHitActive = false
+local fastPunchToggle = ConfiguracaoSection:AddToggle({
+    Title = "Bater Rapidamente",
+    Default = false,
+    Callback = function(state)
+        fastHitActive = state
+        if state then
+            task.spawn(function()
+                while fastHitActive do
+                    local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
+                    if punch then
+                        punch.Parent = LocalPlayer.Character
+                        if punch:FindFirstChild("attackTime") then
+                            punch.attackTime.Value = 0
+                        end
+                    end
+                    task.wait(0.1)
+                end
+            end)
+            
+            task.spawn(function()
+                while fastHitActive do
+                    local punch = LocalPlayer.Character:FindFirstChild("Punch")
+                    if punch then
+                        punch:Activate()
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        else
+            local punch = LocalPlayer.Character:FindFirstChild("Punch")
+            if punch then
+                punch.Parent = LocalPlayer.Backpack
+            end
+        end
+    end
+})
+
+local autoPunchActive = false
 local ultraFastPunchToggle = ConfiguracaoSection:AddToggle({
     Title = "Bater Mega Rapidamente",
     Default = false,
     Callback = function(state)
-        _G.autoPunchActive = state
+        autoPunchActive = state
         if state then
             task.spawn(function()
-                while _G.autoPunchActive do
+                while autoPunchActive do
                     local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
                     if punch then
                         punch.Parent = LocalPlayer.Character
@@ -2451,9 +2416,10 @@ local ultraFastPunchToggle = ConfiguracaoSection:AddToggle({
                     task.wait()
                 end
             end)
+            
             task.spawn(function()
-                while _G.autoPunchActive do
-                    local punch = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Punch")
+                while autoPunchActive do
+                    local punch = LocalPlayer.Character:FindFirstChild("Punch")
                     if punch then
                         punch:Activate()
                     end
@@ -2461,7 +2427,7 @@ local ultraFastPunchToggle = ConfiguracaoSection:AddToggle({
                 end
             end)
         else
-            local punch = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Punch")
+            local punch = LocalPlayer.Character:FindFirstChild("Punch")
             if punch then
                 punch.Parent = LocalPlayer.Backpack
             end
